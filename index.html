@@ -402,7 +402,7 @@
     }
 
     // Fixed-timestep loop: simulate at 60Hz regardless of display refresh rate
-    const FIXED_DT = 1 / 60;
+    const FIXED_DT = 1 / 120;
     const MAX_STEPS = 4; // cap to avoid spiral of death
     let accumulator = 0;
     let lastTime = -1;
