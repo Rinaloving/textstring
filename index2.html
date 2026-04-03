@@ -88,6 +88,15 @@
         transform: scale(1) rotate(360deg) scaleY(0.9) scaleX(1.02);
       }
     }
+    #kitelineCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 25;
+    }
   </style>
 </head>
 <body>
@@ -292,8 +301,8 @@
       playWindSound();
 
       setTimeout(() => {
-        // 隐藏所有文字元素
-        els.forEach(el => el.style.display = 'none');
+        // 保持文字可见，将被小鸟拖拽
+        // els.forEach(el => el.style.display = 'none');
 
         // 创建大燕子
         bigBird = document.createElement('div');
@@ -308,16 +317,21 @@
         birdImg.style.cssText = 'width:120px;height:90px;pointer-events:none;';
         bigBird.appendChild(birdImg);
         
-        // 设置大燕子初始位置（确保在屏幕中央安全区域内）
+        // 设置大燕子初始位置（在屏幕中央）
+        const cRect = container.getBoundingClientRect();
+        
         const birdSize = 120;
         const margin = 40;
-        const safeMinX = margin;
-        const safeMaxX = window.innerWidth - margin - birdSize;
+        
+        // 基于屏幕的安全范围
+        const screenMinX = margin;
+        const screenMaxX = window.innerWidth - margin - birdSize;
         const safeMinY = margin;
         const safeMaxY = window.innerHeight - margin - 90;
         
-        // 确保初始位置在安全边界内
-        bigBirdX = Math.max(safeMinX, Math.min(safeMaxX, window.innerWidth / 2 - 60));
+        // 初始位置在屏幕中央（窗口坐标），然后转换为container相对坐标
+        const initialAbsX = window.innerWidth / 2 - 60;
+        bigBirdX = initialAbsX - cRect.left; // 转换为container相对坐标
         bigBirdY = Math.max(safeMinY, Math.min(safeMaxY, window.innerHeight / 2 - 45));
         
         bigBird.style.cssText = `position:absolute;pointer-events:none;z-index:30;left:0;top:0;transform:scale(0);animation:birdAppear 0.5s ease-out forwards;`;
@@ -327,22 +341,20 @@
         console.log('bigBird created and added to container:', bigBird);
         console.log('container children:', container.children);
 
+        // 创建风筝线Canvas
+        const kitelineCanvas = document.createElement('canvas');
+        kitelineCanvas.id = 'kitelineCanvas';
+        kitelineCanvas.width = window.innerWidth;
+        kitelineCanvas.height = window.innerHeight;
+        container.appendChild(kitelineCanvas);
+        window.kitelineCtx = kitelineCanvas.getContext('2d');
+
         // 移除风效果
         windOverlay.remove();
 
         // 等待动画结束后开始飞行
         setTimeout(() => {
           console.log('Starting flying mode, bigBird animation should be complete');
-          // 设置初始位置并确保在安全范围内
-          const birdSize = 120;
-          const margin = 40;
-          const safeMinX = margin;
-          const safeMaxX = window.innerWidth - margin - birdSize;
-          const safeMinY = margin;
-          const safeMaxY = window.innerHeight - margin - 90;
-          
-          bigBirdX = Math.max(safeMinX, Math.min(safeMaxX, bigBirdX));
-          bigBirdY = Math.max(safeMinY, Math.min(safeMaxY, bigBirdY));
           
           bigBird.style.left = `${bigBirdX}px`;
           bigBird.style.top = `${bigBirdY}px`;
@@ -645,68 +657,79 @@
         }
       }
 
-      // 大燕子飞行物理（独立于letters循环）
-    // ===================== 大燕子飞行轨迹优化版（替换原有飞行逻辑） =====================
+  // 大燕子飞行物理（独立于 letters 循环）
 if (flyingMode && bigBird) {
   const elapsed = (performance.now() - flyingStartTime) / 1000;
   
-  // 可调节参数（推荐值，已优化为优雅燕子风格）
-  const baseSpeed = 0.48;           // 整体飞行节奏（越小越慢悠闲）
-  const horizontalAmp = 210;        // 水平摆动幅度
-  const verticalAmp = 135;          // 垂直起伏幅度（燕子最明显特征）
-  const slowWaveFactor = 0.72;      // 慢速大波浪
-  const fastWaveFactor = 1.85;      // 快速小波动（翅膀感）
-  const driftSpeed = 0.085;         // 整体缓慢漂移速度
-
-  // 多层正弦组合，营造自然流畅的燕子轨迹
-  const mainWaveX = Math.sin(elapsed * baseSpeed) * horizontalAmp;
-  const mainWaveY = Math.sin(elapsed * baseSpeed * slowWaveFactor) * verticalAmp;
-  
-  const flutterX = Math.cos(elapsed * baseSpeed * fastWaveFactor) * 45;   // 轻微左右颤动
-  const flutterY = Math.sin(elapsed * baseSpeed * fastWaveFactor * 1.3) * 28; // 上下轻颤
-  
-  const longDrift = Math.sin(elapsed * driftSpeed) * (window.innerWidth * 0.18); // 缓慢整体移动
-  
-  // 轻微随机噪声（让每次飞行都不完全重复）
-  const noiseX = (Math.sin(elapsed * 2.7) + Math.cos(elapsed * 3.1)) * 22;
-  const noiseY = (Math.sin(elapsed * 2.4) + Math.cos(elapsed * 3.4)) * 18;
-
-  let targetX = window.innerWidth / 2 + longDrift + mainWaveX + flutterX + noiseX;
-  let targetY = window.innerHeight / 2 + mainWaveY + flutterY + noiseY;
-
-  // 严格安全边界（考虑鸟尺寸 + 舒适边距）
   const birdW = 120;
   const birdH = 90;
-  const margin = 45;                    // 可调：想让鸟更靠边就改小一点
-
+  const margin = 10;
+  
+  // 基于整个屏幕宽度的飞行范围
   const minX = margin;
   const maxX = window.innerWidth - margin - birdW;
-  const minY = margin;
-  const maxY = window.innerHeight - margin - birdH;
-
-  targetX = Math.max(minX, Math.min(maxX, targetX));
-  targetY = Math.max(minY, Math.min(maxY, targetY));
-
-  // 平滑移动（带轻微惯性，更自然）
-  const lerpFactor = 0.072;             // 0.06~0.09 之间，越大越灵敏
+  
+  // 自然鸟类飞行轨迹 - 大范围上下起伏
+  const period = 15; // 15 秒一个完整周期
+  const t = (elapsed % period) / period;
+  
+  // 水平运动：从左到右往返
+  const horizontalPos = (Math.sin(t * Math.PI * 2 - Math.PI / 2) + 1) / 2; // 0~1
+  const horizontalWave = Math.sin(t * Math.PI * 4) * 0.08 + Math.sin(t * Math.PI * 6) * 0.04;
+  let targetAbsX = minX + (maxX - minX) * (horizontalPos + horizontalWave);
+  
+  // 竖直运动：大范围上下起伏（像真正的鸟）
+  // 使用多个正弦波叠加，创建不规则但流畅的轨迹
+  const mainVertical = Math.sin(t * Math.PI * 2) * 0.9; // 主波动
+  const secondaryVertical = Math.sin(t * Math.PI * 4 + 1.5) * 0.6; // 次级波动
+  const tertiaryVertical = Math.sin(t * Math.PI * 8 + 0.8) * 0.3; // 细微波动
+  
+  // 垂直范围：从屏幕顶部 15% 到底部 85%（大范围）
+  const topLimit = window.innerHeight * 0.15;
+  const bottomLimit = window.innerHeight * 0.85 - birdH;
+  const verticalRange = bottomLimit - topLimit;
+  
+  // 组合垂直位置
+  const verticalOffset = (mainVertical + secondaryVertical * 0.7 + tertiaryVertical * 0.4) / 1.8;
+  let targetY = topLimit + (verticalRange / 2) * (verticalOffset + 1);
+  
+  // 高频翅膀拍打效果（不影响整体高度）
+  const wingFlap = Math.sin(elapsed * 5) * 12 + Math.sin(elapsed * 3.5) * 6;
+  targetY += wingFlap;
+  
+  // 边界限制
+  targetY = Math.max(margin, Math.min(window.innerHeight - margin - birdH, targetY));
+  targetAbsX = Math.max(minX, Math.min(maxX, targetAbsX));
+  
+  // 转换为相对于 container 的坐标
+  const cRect = container.getBoundingClientRect();
+  const targetX = targetAbsX - cRect.left;
+  
+  // 平滑移动
+  const lerpFactor = 0.08;
   bigBirdX += (targetX - bigBirdX) * lerpFactor;
   bigBirdY += (targetY - bigBirdY) * lerpFactor;
-
-  // 二次强制限制（防止任何意外越界）
-  bigBirdX = Math.max(minX, Math.min(maxX, bigBirdX));
-  bigBirdY = Math.max(minY, Math.min(maxY, bigBirdY));
-
-  // 计算飞行朝向（平滑转向）
+  
+  // 强制限制
+  bigBirdX = Math.max(minX - cRect.left, Math.min(maxX - cRect.left, bigBirdX));
+  bigBirdY = Math.max(margin, Math.min(window.innerHeight - margin - birdH, bigBirdY));
+  
+  // 计算飞行朝向
   const dx = bigBirdX - lastBigBirdX;
   const dy = bigBirdY - lastBigBirdY;
-  if (Math.hypot(dx, dy) > 1.0) {
+  const movementMag = Math.hypot(dx, dy);
+  
+  if (movementMag > 0.3) {
     bigBirdAngle = Math.atan2(dy, dx) * 180 / Math.PI;
     lastBigBirdX = bigBirdX;
     lastBigBirdY = bigBirdY;
   }
-
-  // 轻微翅膀缩放动画（增强活力）
-  const flapScale = 1 + Math.sin(elapsed * baseSpeed * fastWaveFactor * 4) * 0.08;
+  
+  // 翅膀拍打动画
+  const baseWingFreq = 4.5 + Math.abs(dx) * 2;
+  const wingFlap2 = Math.sin(elapsed * baseWingFreq) * 0.12;
+  const flapScale = 1 + wingFlap2 + Math.abs(Math.sin(elapsed * 2.5)) * 0.08;
+  
   bigBird.style.transform = `rotate(${bigBirdAngle}deg) scale(${flapScale})`;
 }else {
         console.log('Flying mode:', flyingMode, 'bigBird:', !!bigBird);
@@ -717,7 +740,6 @@ if (flyingMode && bigBird) {
         for (let i = 0; i < letters.length - 1; i++) {
           const a = letters[i], b = letters[i + 1];
           if (a.locked && b.locked) continue;
-          if (flyingMode && bigBird) continue; // 飞行模式下禁用约束，让大燕子自由飞行
           
           const ax = a.x + a.w / 2, ay = a.y + LINE_HEIGHT / 2;
           const bx = b.x + b.w / 2, by = b.y + LINE_HEIGHT / 2;
@@ -735,6 +757,29 @@ if (flyingMode && bigBird) {
             b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5;
           }
         }
+      }
+
+      // 飞行模式下：最后一个字符被小鸟拉向上方（风筝线效果）
+      if (flyingMode && bigBird) {
+        const lastLetter = letters[letters.length - 1];
+        const birdActualX = bigBirdX + 60; // 小鸟中心
+        const birdActualY = bigBirdY + 45;
+        
+        // 将最后一个字符拉向小鸟
+        const letterCenterX = lastLetter.x + lastLetter.w / 2;
+        const letterCenterY = lastLetter.y + LINE_HEIGHT / 2;
+        
+        const dx = birdActualX - letterCenterX;
+        const dy = birdActualY - letterCenterY;
+        const dist = Math.hypot(dx, dy) || 0.01;
+        
+        // 风筝线长度约束（允许一些松弛以创建自然曲线）
+        const kitelineLength = dist * 0.85; // 拉力强度
+        const diff = (dist - kitelineLength) / dist;
+        
+        // 应用拉力
+        lastLetter.x += dx * diff * 0.15; // 相对温和的拉力
+        lastLetter.y += dy * diff * 0.15;
       }
 
       // Letter collision
@@ -828,7 +873,7 @@ if (flyingMode && bigBird) {
         els[i].style.transform = `translate(${letters[i].x}px, ${letters[i].y}px)`;
       }
 
-      // 更新大燕子位置
+      // 更新大燕子位置和风筝线
       if (bigBird && flyingMode) {
         // GIF本身就有翅膀动画，不需要额外切换
 
@@ -837,8 +882,35 @@ if (flyingMode && bigBird) {
         bigBird.style.top = `${bigBirdY}px`;
         bigBird.style.transform = `rotate(${bigBirdAngle}deg)`;
 
-        // 调试信息
-        console.log('bigBird position:', bigBirdX, bigBirdY, 'angle:', bigBirdAngle);
+        // 绘制风筝线
+        if (window.kitelineCtx) {
+          const ctx = window.kitelineCtx;
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+          
+          const birdActualX = bigBirdX + 60;
+          const birdActualY = bigBirdY + 45;
+          
+          // 绘制从最后一个字符到小鸟的线条
+          if (letters.length > 0) {
+            const lastLetter = letters[letters.length - 1];
+            const letterCenterX = lastLetter.x + lastLetter.w / 2;
+            const letterCenterY = lastLetter.y + LINE_HEIGHT / 2;
+            
+            // 绘制曲线（风筝线）
+            ctx.strokeStyle = 'rgba(100, 150, 200, 0.6)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]); // 虚线效果
+            ctx.beginPath();
+            ctx.moveTo(letterCenterX, letterCenterY);
+            
+            // 添加控制点创建曲线
+            const midX = (letterCenterX + birdActualX) / 2;
+            const midY = (letterCenterY + birdActualY) / 2;
+            ctx.quadraticCurveTo(midX + 30, midY, birdActualX, birdActualY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
       }
 
       requestAnimationFrame(render);
