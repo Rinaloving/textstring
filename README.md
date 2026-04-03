@@ -1,4 +1,3 @@
-以下是你的项目介绍转换为清晰、美观的 **Markdown 格式**：
 
 ```markdown
 # extString - 交互式文本物理模拟
