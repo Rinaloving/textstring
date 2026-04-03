@@ -1,12 +1,103 @@
-textstring/
-├── index2.html # Main application file
-├── pretext.js # Text layout and measurement library
-├── flying-bird.gif # Bird animation asset
-└── README.md # This file
+extString - 交互式文本物理模拟
+一个将文字转化为物理链条的交互式网页体验，支持拖拽互动、重力模拟和风筝飞鸟效果。
 
-1. Initial State → Text displayed in organized rows
-2. User Drag → Last 6 characters become draggable
-3. Release → Chain reaction unlocks characters
-4. Fall → Characters fall with physics simulation
-5. Wind Effect → Overlay and particles appear
-6. Flight Mode → Bird appears and pulls text chain
+✨ 功能特性
+核心交互
+拖拽文字：拖动末尾字符触发连锁反应
+物理模拟：真实的重力、碰撞检测和约束运动
+连锁反应：拉动一个字符会带动相连的字符
+响应式布局：文字自动适应不同屏幕尺寸
+视觉效果
+溅射粒子：字符落地时产生动画粒子
+风吹效果：大气风效叠加层与粒子动画
+飞鸟风筝：大鸟（风筝）牵引文字链飞过天空
+风筝线：动态曲线连接鸟与文字
+音频效果
+落地音效：字符落地时的低频冲击声
+风声：飞行模式中的环境风声音效
+溅射声：撞击时的高频粒子声
+🛠️ 技术栈
+技术	用途
+pretext.js	文本测量、分词和布局
+原生 JavaScript	物理引擎和交互逻辑
+HTML5 Canvas	风筝线渲染
+Web Audio API	音效生成
+CSS3 动画	视觉效果和过渡
+Intl.Segmenter	字素级文本分词
+📁 项目结构
+textstring/
+├── index2.html          # 主应用文件
+├── pretext.js           # 文本布局和测量库
+├── flying-bird.gif      # 飞鸟动画素材
+└── README.md            # 项目说明文档
+🚀 快速开始
+克隆或下载 项目文件
+放置 flying-bird.gif 到项目根目录
+打开 index2.html 在现代浏览器中（Chrome、Firefox、Edge）
+与文字互动：
+拖动末尾 6 个字符开始
+释放触发连锁反应
+等待所有字符掉落后飞鸟出现
+🎮 操作说明
+操作	效果
+拖动字符	拉动并释放启动物理模拟
+按 F 键	切换重力开关
+调整窗口大小	文字布局自动适应
+⚙️ 配置参数
+在 index2.html 中的关键参数：
+
+javascript
+// 基础配置
+const FONT = '20px "Noto Serif SC", "Microsoft YaHei", serif';
+const LINE_HEIGHT = 32;
+const CONSTRAINT_DIST = 1.2;      // 链条松弛倍数
+const UNLOCK_THRESHOLD = 1;       // 解锁下一个字符的距离阈值
+const ITERATIONS = 12;            // 物理约束迭代次数
+const DAMPING = 0.97;             // 速度阻尼
+const GRAVITY = 0.15;             // 重力大小
+
+// 飞行模式配置
+const pullStrength = 0.15;        // 鸟的拉力强度
+const kitelineLength = 0.85;      // 风筝线松弛度 (0-1)
+const pullCount = 15;             // 被拉动的字符数量
+🎯 工作原理
+1. 文本准备
+使用 Intl.Segmenter 将文本分割为字素
+通过 pretext.js 测量每个字符的宽度
+字符按蛇形阅读顺序排列
+2. 物理引擎
+Verlet 积分：基于位置的物理模拟，稳定性高
+距离约束：字符保持原始布局的静止长度
+碰撞检测：圆形碰撞防止重叠
+边界检查：字符从屏幕边缘反弹
+3. 飞行模式
+所有字符掉落后，飞鸟出现
+鸟沿正弦曲线路径飞行
+末尾字符像风筝一样被鸟牵引
+动态 Canvas 线渲染风筝绳
+🌟 视觉流程
+1. 初始状态 → 文字以有序行显示
+2. 用户拖拽 → 末尾 6 个字符可拖动
+3. 释放 → 连锁反应解锁字符
+4. 下落 → 字符带物理模拟下落
+5. 风效 → 叠加层和粒子出现
+6. 飞行模式 → 鸟出现并牵引文字链
+📝 注意事项
+浏览器支持：需要支持 ES6+ 的现代浏览器
+音频上下文：音效需要用户交互后才能启用
+性能：使用固定步长物理模拟 (120Hz) 保证流畅动画
+移动端：通过 Pointer Events API 支持触摸事件
+🐛 故障排除
+问题	解决方案
+鸟不出现	确保 flying-bird.gif 存在于项目根目录
+没有声音	点击任意位置启用 Web Audio API
+文字无法拖动	检查浏览器控制台是否有错误
+性能不佳	降低 ITERATIONS 或 pullCount 值
+📄 许可证
+本项目用于教育和演示目的。
+
+🙏 致谢
+文本布局：pretext 库
+设计灵感：来自动态文字实验
+音频：使用 Web Audio API 程序化生成
+享受飞文字体验！🪁
